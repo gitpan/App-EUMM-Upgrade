@@ -1,6 +1,6 @@
 ---
 name: App-EUMM-Upgrade
-version: 0.21
+version: 0.22
 author:
   - 'Alexandr Ciornii <alexchorny@gmail.com>'
 abstract: Perl tool to upgrade ExtUtils::MakeMaker-based Makefile.PL
@@ -12,14 +12,14 @@ requires:
   ExtUtils::MakeMaker: 6.56
   File::Slurp: 0
   Github::Fork::Parent: 0
-  Text::FindIndent: 0
+  Text::FindIndent: 0.08
   perl: 5.006
 build_requires:
   Test::More: 0
 provides:
   App::EUMM::Upgrade:
     file: lib/App/EUMM/Upgrade.pm
-    version: 0.21
+    version: 0.22
 generated_by: Module::Build version 0.33
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html

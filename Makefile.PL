@@ -10,7 +10,7 @@ WriteMakefile
                            'File::Slurp' => '0',
                            'Github::Fork::Parent' => '0',
                            'Test::More' => '0',
-                           'Text::FindIndent' => '0'
+                           'Text::FindIndent' => '0.08'
                          },
           'INSTALLDIRS' => 'site',
           'EXE_FILES' => [

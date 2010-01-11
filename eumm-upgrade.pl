@@ -10,7 +10,7 @@ use warnings;
 use File::Slurp;
 #require Module::Install::Repository;
 #require Module::Install::Metadata;
-use Text::FindIndent;
+use Text::FindIndent 0.08;
 
 my $content=read_file('Makefile.PL') or die "Cannot find 'Makefile.PL'";
 if ($content =~ /use inc::Module::Install/) {
@@ -20,13 +20,13 @@ if ($content =~ /WriteMakefile1\s*\(/) {
   print "Upgrade is already applied\n";
   exit;
 }
-if ($content !~ /use ExtUtils::MakeMaker/ or $content !~ /WriteMakefile\s*\(/) {
+if ($content !~ /\b(?:use|require) ExtUtils::MakeMaker/ or $content !~ /WriteMakefile\s*\(/) {
   die "ExtUtils::MakeMaker is not used";
 }
 
 sub process_file {
   my $content=shift;
-  my $indentation_type = Text::FindIndent->parse($content);
+  my $indentation_type = Text::FindIndent->parse($content,first_level_indent_only=>1);
   my $space_to_use;
   if ($indentation_type =~ /^[sm](\d+)/) {
     print "Indentation with $1 spaces\n";
@@ -85,21 +85,20 @@ sub WriteMakefile1 {  #Written by Alexandr Ciornii, version 0.21. Added by eumm-
 EOT
   my $space=' 'x4;
   $content=~s/
-  \(\s*\$\]\s*>=\s*5\.005\s*\?\s*\#\#\s*\QAdd these new keywords supported since 5.005\E\s*
-  \s+\(\s*ABSTRACT_FROM\s*=>\s*'([^'\n]+)',\s*\#\s*\Qretrieve abstract from module\E\s*
+  \(\s*\$\]\s*>=\s*5\.005\s*\?\s*(?:\#\#\s*\QAdd these new keywords supported since 5.005\E\s*)?
+  \s+\(\s*ABSTRACT(?:_FROM)?\s*=>\s*'([^'\n]+)',\s*(?:\#\s*\Qretrieve abstract from module\E\s*)?
   \s+AUTHOR\s*=>\s*'([^'\n]+)'
   \s*\)\s*\Q: ()\E\s*\),\s+
   /ABSTRACT_FROM => '$1',\n${space}AUTHOR => '$2',\n/sx;
 
   $content=~s/
           \(\s*\$ ExtUtils::MakeMaker::VERSION\s+
-          (?:ge\s+'\E [\d\._]+ ' | >=?\s*[\d\._]+)\s+\Q? (\E \s*
+          (?:ge\s+' [\d\._]+ ' \s* | >=?\s*[\d\._]+\s+)\?\s+\(\E \s*
           ( [^()]+? ) \s*
           \)\s*\:\s*\(\)\s*\),
-  /$1/sxg;
-    #($ExtUtils::MakeMaker::VERSION >= 6.3002
-    #    ? ('LICENSE' => 'perl')
-    #    : ()),
+  /$space$1/sxg;
+
+  $content=~s/(WriteMakefile\()(\S)/$1\n$space$2/;
 
   $content=~s/
           \(\s*\$\]\s* \Q>=\E \s* 5[\d\._]+ \s* \Q? (\E \s+
@@ -119,9 +118,11 @@ EOT
 
     };
     push @resourses,"${space}${space}${space}repository => '$repo',";
+  } else {
+    push @resourses,"${space}${space}${space}#repository => 'URL to repository here',";
   }
 
-  if ($content=~/\bVERSION_FROM['"]?\s*=>\s*'([^'\n]+)'/) {
+  if ($content=~/\bVERSION_FROM['"]?\s*=>\s*['"]([^'"\n]+)['"]/) {
     my $main_file=$1;
     my $main_file_content=eval { read_file($1) };
     if (!$main_file_content) {
@@ -141,7 +142,7 @@ EOT
           push @param,"    LICENSE => '$l',\n";
         }
       }
-      if ($content !~ /\bMIN_PERL_VERSION\s*=>\s*['"]/) {
+      if ($content !~ /\bMIN_PERL_VERSION['"]?\s*=>\s*['"]?\d/) {
         my $version=Module::Install::Metadata::_extract_perl_version($main_file_content) ||
           Module::Install::Metadata::_extract_perl_version($content);
         if ($version) {
@@ -178,7 +179,7 @@ EOT
   if (@param) {
     $param="\n".join('',@param);
     $param=apply_indent($param,4,$space_to_use);
-    $param=~s/\s+$//s;
+    $param=~s/\s+$/\n/s;
   }
   $content=~s/WriteMakefile\s*\(/WriteMakefile1($param/s;
 
@@ -250,6 +251,7 @@ sub _extract_license {
 		my $license_text = $1;
 		my @phrases      = (
 			'under the same (?:terms|license) as (?:perl|the perl programming language)' => 'perl', 1,
+			'under the terms of (?:perl|the perl programming language) itself' => 'perl', 1,
 			'GNU general public license'         => 'gpl',         1,
 			'GNU public license'                 => 'gpl',         1,
 			'GNU lesser general public license'  => 'lgpl',        1,
